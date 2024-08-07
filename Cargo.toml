@@ -1,0 +1,19 @@
+[package]
+name = "arc_wrapper"
+version = "0.1.0"
+edition = "2021"
+authors = ["yiyue-reimu"]
+description = "A attribute macro to generate a wrapper for a struct."
+readme = "README.md"
+repository = "https://github.com/yiyue-reimu/arc_wrapper"
+license = "GPL-3.0"
+keywords = ["async", "macro", "attribute", "tool"]
+categories = ["development-tools"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["derive"] }
+quote = "1"
+proc-macro2 = "1"

@@ -1,3 +1,5 @@
+use std::fmt::Debug;
+
 use arc_wrapper::arc_wrapper;
 
 #[arc_wrapper(
@@ -14,8 +16,12 @@ struct Rw {}
     derive(Clone, Debug),
     mutex(method = "mutex_guard", doc = r"return the MutexGuard")
 )]
-pub struct WithGenerics<T> {
-    _a: T,
+pub struct WithGenerics<T: Clone, U: Debug>
+where
+    T: Debug,
+    U: Clone,
+{
+    _a: (T, U),
 }
 
 #[arc_wrapper(lock = "mutex")]
@@ -46,7 +52,9 @@ fn main() {
     drop(a.write_guard());
     // let _a2 = a.clone();
 
-    let wg = WithGenerics { _a: "abccde" };
+    let wg = WithGenerics {
+        _a: ("abccde", 114514),
+    };
     let wg = ArcWithGenerics::from(wg);
     drop(wg.mutex_guard());
     let _wg2 = wg.clone();

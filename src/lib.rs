@@ -242,15 +242,30 @@ pub fn arc_wrapper(
     let new_struct_vis = new_struct_vis.unwrap_or(derive_input.vis);
     let new_struct_name = new_struct_name.unwrap_or(format_ident!("Arc{}", derive_input.ident));
 
-    let new_struct_generic = derive_input.generics.clone();
+    let generices_without_bounds = 'gwob: {
+        let generics = derive_input.generics.clone();
+        if generics.lt_token.is_none() {
+            break 'gwob quote::quote! {};
+        }
+        let generics = generics.params.into_iter().map(|param| match param {
+            syn::GenericParam::Lifetime(lifetime) => lifetime.lifetime.into_token_stream(),
+            syn::GenericParam::Type(r#type) => r#type.ident.into_token_stream(),
+            syn::GenericParam::Const(r#const) => r#const.ident.into_token_stream(),
+        });
+        quote::quote! {
+            <#(#generics,)*>
+        }
+    };
+
     let raw_struct_generic_without_where = {
         let mut raw_struct_generic = derive_input.generics.clone();
         raw_struct_generic.where_clause = None;
         raw_struct_generic
     };
     let raw_struct_type = quote::quote! {
-        #raw_struct_name #raw_struct_generic_without_where
+        #raw_struct_name #generices_without_bounds
     };
+    let where_clause = derive_input.generics.where_clause.clone();
 
     let new_struct = {
         let inner = match &lock_kind {
@@ -267,14 +282,14 @@ pub fn arc_wrapper(
 
         quote::quote! {
             #(#[#new_struct_metas])*
-            #new_struct_vis struct #new_struct_name #new_struct_generic {
+            #new_struct_vis struct #new_struct_name #raw_struct_generic_without_where #where_clause {
                 inner: #inner
             }
         }
     };
 
     let from_impl = quote::quote! {
-        impl #raw_struct_generic_without_where From< #raw_struct_type > for #new_struct_name #new_struct_generic {
+        impl #raw_struct_generic_without_where From< #raw_struct_type > for #new_struct_name #generices_without_bounds #where_clause {
             fn from(inner: #raw_struct_type ) -> Self {
                 Self {
                     inner: ::std::sync::Arc::new(inner.into())
@@ -324,7 +339,7 @@ pub fn arc_wrapper(
     };
 
     let new_struct_impl = quote::quote! {
-        impl #raw_struct_generic_without_where #new_struct_name #new_struct_generic {
+        impl #raw_struct_generic_without_where #new_struct_name #generices_without_bounds #where_clause  {
             #new_struct_methods
         }
     };

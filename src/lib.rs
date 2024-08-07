@@ -141,7 +141,7 @@ impl Parse for Config {
                     match ident.as_str() {
                         "mutex" => {
                             assert!(config.lock.is_none(), "duplicate key: {}", ident);
-                            config.lock = Some(Lock::Rw(Rw::default()));
+                            config.lock = Some(Lock::Mutex(Mutex::default()));
                         }
                         "rwlock" => {
                             assert!(config.lock.is_none(), "duplicate key: {}", ident);

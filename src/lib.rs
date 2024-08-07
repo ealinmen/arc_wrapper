@@ -18,12 +18,11 @@ impl Parse for Method {
                     let key = path_to_ident(&pair.path);
                     match key.as_str() {
                         "vis" => {
-                            let value_tokens = trim_string_lit(&pair.value)?;
-                            let vis = syn::parse2::<syn::Visibility>(value_tokens)?;
+                            let vis = parse_vis_from_expr(&pair.value)?;
                             assert!(r.vis.is_none(), "duplicate key: {}", key);
                             r.vis = Some(vis);
                         }
-                        "method" => {
+                        "rename" | "method" => {
                             let value_tokens = trim_string_lit(&pair.value)?;
                             let name = syn::parse2::<syn::Ident>(value_tokens)?;
                             assert!(r.name.is_none(), "duplicate key: {}", key);
@@ -59,8 +58,7 @@ impl Parse for Rw {
                     let key = path_to_ident(&pair.path);
                     match key.as_str() {
                         "write_vis" => {
-                            let value_tokens = trim_string_lit(&pair.value)?;
-                            let vis = syn::parse2::<syn::Visibility>(value_tokens)?;
+                            let vis = parse_vis_from_expr(&pair.value)?;
                             assert!(rw.write.vis.is_none(), "duplicate key: {}", key);
                             rw.write.vis = Some(vis);
                         }
@@ -71,8 +69,7 @@ impl Parse for Rw {
                             rw.write.name = Some(name);
                         }
                         "read_vis" => {
-                            let value_tokens = trim_string_lit(&pair.value)?;
-                            let vis = syn::parse2::<syn::Visibility>(value_tokens)?;
+                            let vis = parse_vis_from_expr(&pair.value)?;
                             assert!(rw.read.vis.is_none(), "duplicate key: {}", key);
                             rw.read.vis = Some(vis);
                         }
@@ -137,7 +134,7 @@ impl Parse for Config {
             match meta {
                 syn::Meta::Path(path) => {
                     let ident = path_to_ident(&path);
-                    println!("ident: {}", ident);
+
                     match ident.as_str() {
                         "mutex" => {
                             assert!(config.lock.is_none(), "duplicate key: {}", ident);
@@ -154,15 +151,15 @@ impl Parse for Config {
                 }
                 syn::Meta::NameValue(pair) => {
                     let key = path_to_ident(&pair.path);
-                    let value_tokens = trim_string_lit(&pair.value)?;
 
                     match key.as_str() {
                         "vis" => {
-                            let vis = syn::parse2::<syn::Visibility>(value_tokens)?;
+                            let vis = parse_vis_from_expr(&pair.value)?;
                             assert!(config.struct_vis.is_none(), "duplicate key: {}", key);
                             config.struct_vis = Some(vis);
                         }
                         "lock" => {
+                            let value_tokens = trim_string_lit(&pair.value)?;
                             let lock = match value_tokens.to_string().as_str() {
                                 "mutex" => Lock::Mutex(Mutex::default()),
                                 "rwlock" => Lock::Rw(Rw::default()),
@@ -176,6 +173,7 @@ impl Parse for Config {
                             config.lock = Some(lock);
                         }
                         "rename" => {
+                            let value_tokens = trim_string_lit(&pair.value)?;
                             let name = syn::parse2::<syn::Ident>(value_tokens)?;
                             assert!(config.name.is_none(), "duplicate key: {}", key);
                             config.name = Some(name);
@@ -213,6 +211,15 @@ fn trim_string_lit(expr: &syn::Expr) -> Result<proc_macro2::TokenStream, proc_ma
         .trim_start_matches("\"")
         .trim_end_matches("\"")
         .parse()
+}
+
+fn parse_vis_from_expr(expr: &syn::Expr) -> syn::Result<syn::Visibility> {
+    let string = expr.into_token_stream().to_string();
+    let string = string.trim_start_matches("\"").trim_end_matches("\"");
+    match string {
+        "hidden" => Ok(syn::Visibility::Inherited),
+        vis => syn::parse_str::<syn::Visibility>(vis),
+    }
 }
 
 #[proc_macro_attribute]

@@ -1,6 +1,6 @@
 [package]
 name = "arc_wrapper"
-version = "0.1.1"
+version = "0.1.4"
 edition = "2021"
 authors = ["yiyue-reimu"]
 description = "A attribute macro to generate a wrapper for a struct."

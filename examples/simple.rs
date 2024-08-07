@@ -1,6 +1,12 @@
 use arc_wrapper::arc_wrapper;
 
-#[arc_wrapper(vis = "pub", rwlock(read = "read_guard", write = "write_guard"))]
+#[arc_wrapper(
+    vis = "pub",
+    rwlock(
+        read(method = "read_guard", vis = "hidden"),
+        write(method = "write_guard", vis = "pub(crate)")
+    )
+)]
 struct Rw {}
 
 #[derive(Debug)]
@@ -27,7 +33,7 @@ mod inner {
         pub _a: i32,
     }
 
-    #[arc_wrapper::arc_wrapper(mutex, vis = "")]
+    #[arc_wrapper::arc_wrapper(mutex, vis = "hidden")]
     pub struct NotExport {
         pub _a: i32,
     }
